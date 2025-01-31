@@ -16,23 +16,27 @@
             color: white;
             text-align: center;
             margin: 0;
+            padding: 10px;
+            box-sizing: border-box;
+            overflow: hidden;
         }
         .container {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            width: 600px;
+            width: 100%;
+            max-width: 600px;
             margin-bottom: 20px;
         }
         .player {
-            font-size: 1.5em;
+            font-size: 1.2em;
             font-weight: bold;
-            width: 200px;
+            width: 30%;
             text-align: center;
         }
         .start-btn, .reset-btn {
-            padding: 15px 30px;
-            font-size: 1.5em;
+            padding: 10px 20px;
+            font-size: 1.2em;
             background: linear-gradient(135deg, #61dafb, #21a1f1);
             border: none;
             cursor: pointer;
@@ -48,26 +52,29 @@
         }
         .board {
             display: none;
-            grid-template-columns: repeat(3, 120px);
-            grid-template-rows: repeat(3, 120px);
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
             gap: 10px;
             margin-top: 20px;
+            width: 90%;
+            max-width: 300px;
+            aspect-ratio: 1 / 1;
             position: relative;
         }
         .cell {
-            width: 120px;
-            height: 120px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 2.5em;
+            font-size: 2em;
             font-weight: bold;
             background-color: #333;
             border-radius: 15px;
             cursor: pointer;
             transition: all 0.3s;
             color: white;
+            aspect-ratio: 1 / 1;
             position: relative;
+            overflow: hidden;
         }
         .cell.taken {
             cursor: not-allowed;
@@ -86,20 +93,22 @@
             display: none;
             justify-content: center;
             align-items: center;
+            z-index: 100;
         }
         .popup {
             background: rgba(255, 255, 255, 0.9);
             color: #333;
-            padding: 30px;
+            padding: 20px;
             border-radius: 15px;
             text-align: center;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            width: 300px;
+            width: 90%;
+            max-width: 300px;
             position: relative;
         }
         .popup h2 {
             margin-top: 0;
-            font-size: 1.8em;
+            font-size: 1.5em;
             color: #1e1e1e;
         }
         .popup input {
@@ -139,18 +148,6 @@
             cursor: pointer;
             color: #333;
         }
-        .winner-animation {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 3em;
-            font-weight: bold;
-            opacity: 0;
-            transition: opacity 1.5s ease-in-out;
-            color: #61dafb;
-            z-index: 10;
-        }
         .reset-btn {
             display: none;
             background: linear-gradient(135deg, #ff4d4d, #ff1a1a);
@@ -158,40 +155,50 @@
         .reset-btn:hover {
             background: linear-gradient(135deg, #ff1a1a, #ff4d4d);
         }
-        /* End Transition Animation */
-        @keyframes moveToCenter {
+        /* Particle Explosion Animation */
+        @keyframes explode {
             0% {
-                transform: translate(0, 0);
-                opacity: 1;
-            }
-            100% {
-                transform: translate(
-                    calc(-50% + 60px + var(--x-offset)),
-                    calc(-50% + 60px + var(--y-offset))
-                );
-                opacity: 0;
-            }
-        }
-        @keyframes revealWinner {
-            0% {
-                transform: scale(0);
-                opacity: 0;
-            }
-            100% {
                 transform: scale(1);
                 opacity: 1;
             }
+            100% {
+                transform: scale(0);
+                opacity: 0;
+            }
         }
-        .end-transition {
+        .particle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #61dafb;
+            border-radius: 50%;
+            animation: explode 1s ease-out forwards;
+        }
+        /* Holographic Winner Text */
+        @keyframes holographic {
+            0% {
+                transform: translate(-50%, -50%) rotateY(0deg) scale(1);
+                opacity: 0;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -50%) rotateY(360deg) scale(1.5);
+                opacity: 0;
+            }
+        }
+        .holographic-text {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 3em;
+            font-size: 2.5em;
             font-weight: bold;
             color: #61dafb;
-            opacity: 0;
-            animation: revealWinner 1.5s ease-in-out forwards;
+            text-shadow: 0 0 10px #61dafb, 0 0 20px #61dafb, 0 0 30px #61dafb;
+            animation: holographic 3s ease-in-out infinite;
+            z-index: 10;
         }
     </style>
 </head>
@@ -214,7 +221,6 @@
 
     <div class="board" id="board"></div>
     <button class="reset-btn" id="resetBtn" onclick="resetGame()">Reset Game</button>
-    <div class="winner-animation" id="winnerAnimation"></div>
     
     <script>
         let currentPlayer = "X";
@@ -267,23 +273,26 @@
         
         function triggerEndTransition(message) {
             const cells = document.querySelectorAll(".cell");
-            const centerX = 180; // Center of the board (120px * 1.5)
-            const centerY = 180; // Center of the board (120px * 1.5)
-            
-            cells.forEach((cell, index) => {
-                const rect = cell.getBoundingClientRect();
-                const offsetX = centerX - rect.left;
-                const offsetY = centerY - rect.top;
-                cell.style.setProperty("--x-offset", `${offsetX}px`);
-                cell.style.setProperty("--y-offset", `${offsetY}px`);
-                cell.style.animation = "moveToCenter 1s ease-in-out forwards";
+            cells.forEach((cell) => {
+                // Create particles for each cell
+                for (let i = 0; i < 50; i++) {
+                    const particle = document.createElement("div");
+                    particle.classList.add("particle");
+                    particle.style.left = `${Math.random() * 100}%`;
+                    particle.style.top = `${Math.random() * 100}%`;
+                    particle.style.animationDelay = `${Math.random()}s`;
+                    cell.appendChild(particle);
+                }
+                // Explode the cell
+                cell.style.animation = "explode 1s ease-out forwards";
             });
             
+            // Show holographic winner text
             setTimeout(() => {
-                const winnerDiv = document.createElement("div");
-                winnerDiv.className = "end-transition";
-                winnerDiv.innerText = message;
-                document.body.appendChild(winnerDiv);
+                const holographicText = document.createElement("div");
+                holographicText.className = "holographic-text";
+                holographicText.innerText = message;
+                document.body.appendChild(holographicText);
             }, 1000);
         }
         
@@ -318,7 +327,7 @@
             currentPlayer = "X";
             document.getElementById("board").innerHTML = "";
             createBoard();
-            document.querySelector(".end-transition")?.remove();
+            document.querySelector(".holographic-text")?.remove();
         }
     </script>
 </body>
