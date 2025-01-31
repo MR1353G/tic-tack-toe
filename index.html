@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Poppins', sans-serif;
+            background-color: #1e1e1e;
+            color: white;
+            text-align: center;
+            margin: 0;
+        }
+        .container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 600px;
+            margin-bottom: 20px;
+        }
+        .player {
+            font-size: 1.5em;
+            font-weight: bold;
+            width: 200px;
+            text-align: center;
+        }
+        .start-btn, .reset-btn {
+            padding: 15px 30px;
+            font-size: 1.5em;
+            background: linear-gradient(135deg, #61dafb, #21a1f1);
+            border: none;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: transform 0.2s, background 0.2s;
+            margin: 10px;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        .start-btn:hover, .reset-btn:hover {
+            transform: scale(1.05);
+            background: linear-gradient(135deg, #21a1f1, #61dafb);
+        }
+        .board {
+            display: none;
+            grid-template-columns: repeat(3, 120px);
+            grid-template-rows: repeat(3, 120px);
+            gap: 10px;
+            margin-top: 20px;
+            position: relative;
+        }
+        .cell {
+            width: 120px;
+            height: 120px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5em;
+            font-weight: bold;
+            background-color: #333;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+            position: relative;
+        }
+        .cell.taken {
+            cursor: not-allowed;
+        }
+        .cell:hover:not(.taken) {
+            background-color: #444;
+        }
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .popup {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            width: 300px;
+            position: relative;
+        }
+        .popup h2 {
+            margin-top: 0;
+            font-size: 1.8em;
+            color: #1e1e1e;
+        }
+        .popup input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        .popup input:focus {
+            border-color: #61dafb;
+            outline: none;
+        }
+        .popup button {
+            padding: 10px 20px;
+            font-size: 1em;
+            background: linear-gradient(135deg, #61dafb, #21a1f1);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            color: white;
+            transition: transform 0.2s, background 0.2s;
+        }
+        .popup button:hover {
+            transform: scale(1.05);
+            background: linear-gradient(135deg, #21a1f1, #61dafb);
+        }
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #333;
+        }
+        .winner-animation {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3em;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out;
+            color: #61dafb;
+            z-index: 10;
+        }
+        .reset-btn {
+            display: none;
+            background: linear-gradient(135deg, #ff4d4d, #ff1a1a);
+        }
+        .reset-btn:hover {
+            background: linear-gradient(135deg, #ff1a1a, #ff4d4d);
+        }
+        /* End Transition Animation */
+        @keyframes moveToCenter {
+            0% {
+                transform: translate(0, 0);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(
+                    calc(-50% + 60px + var(--x-offset)),
+                    calc(-50% + 60px + var(--y-offset))
+                );
+                opacity: 0;
+            }
+        }
+        @keyframes revealWinner {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        .end-transition {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3em;
+            font-weight: bold;
+            color: #61dafb;
+            opacity: 0;
+            animation: revealWinner 1.5s ease-in-out forwards;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="player" id="playerXName">Player X</div>
+        <button class="start-btn" onclick="openPopup()">Start Game</button>
+        <div class="player" id="playerOName">Player O</div>
+    </div>
+    
+    <div class="popup-overlay" id="popupOverlay">
+        <div class="popup">
+            <button class="close-btn" onclick="closePopup()">×</button>
+            <h2>Enter Player Names</h2>
+            <input type="text" id="playerX" placeholder="Player X Name"><br><br>
+            <input type="text" id="playerO" placeholder="Player O Name"><br><br>
+            <button onclick="startGame()">Start</button>
+        </div>
+    </div>
+
+    <div class="board" id="board"></div>
+    <button class="reset-btn" id="resetBtn" onclick="resetGame()">Reset Game</button>
+    <div class="winner-animation" id="winnerAnimation"></div>
+    
+    <script>
+        let currentPlayer = "X";
+        let playerNames = { X: "Player X", O: "Player O" };
+        let gameBoard = Array(9).fill("");
+        let gameOver = false;
+        
+        function openPopup() {
+            document.getElementById("popupOverlay").style.display = "flex";
+        }
+        
+        function closePopup() {
+            document.getElementById("popupOverlay").style.display = "none";
+        }
+        
+        function startGame() {
+            const playerXInput = document.getElementById("playerX").value.trim();
+            const playerOInput = document.getElementById("playerO").value.trim();
+            if (playerXInput) playerNames.X = playerXInput;
+            if (playerOInput) playerNames.O = playerOInput;
+            
+            document.getElementById("playerXName").innerText = playerNames.X;
+            document.getElementById("playerOName").innerText = playerNames.O;
+            
+            closePopup();
+            document.getElementById("board").style.display = "grid";
+            document.getElementById("resetBtn").style.display = "block";
+            createBoard();
+        }
+        
+        function checkWinner() {
+            const winningCombos = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8], 
+                [0, 3, 6], [1, 4, 7], [2, 5, 8], 
+                [0, 4, 8], [2, 4, 6]
+            ];
+            for (const combo of winningCombos) {
+                const [a, b, c] = combo;
+                if (gameBoard[a] && gameBoard[a] === gameBoard[b] && gameBoard[a] === gameBoard[c]) {
+                    triggerEndTransition(`${playerNames[gameBoard[a]]} Wins!`);
+                    gameOver = true;
+                    return;
+                }
+            }
+            if (!gameBoard.includes("")) {
+                triggerEndTransition("It's a Draw!");
+                gameOver = true;
+            }
+        }
+        
+        function triggerEndTransition(message) {
+            const cells = document.querySelectorAll(".cell");
+            const centerX = 180; // Center of the board (120px * 1.5)
+            const centerY = 180; // Center of the board (120px * 1.5)
+            
+            cells.forEach((cell, index) => {
+                const rect = cell.getBoundingClientRect();
+                const offsetX = centerX - rect.left;
+                const offsetY = centerY - rect.top;
+                cell.style.setProperty("--x-offset", `${offsetX}px`);
+                cell.style.setProperty("--y-offset", `${offsetY}px`);
+                cell.style.animation = "moveToCenter 1s ease-in-out forwards";
+            });
+            
+            setTimeout(() => {
+                const winnerDiv = document.createElement("div");
+                winnerDiv.className = "end-transition";
+                winnerDiv.innerText = message;
+                document.body.appendChild(winnerDiv);
+            }, 1000);
+        }
+        
+        function handleMove(event) {
+            if (gameOver) return;
+            const cell = event.target;
+            const index = cell.dataset.index;
+            if (gameBoard[index] === "") {
+                gameBoard[index] = currentPlayer;
+                cell.innerText = currentPlayer;
+                cell.classList.add("taken");
+                checkWinner();
+                if (!gameOver) currentPlayer = currentPlayer === "X" ? "O" : "X";
+            }
+        }
+        
+        function createBoard() {
+            const board = document.getElementById("board");
+            board.innerHTML = "";
+            gameBoard.forEach((_, index) => {
+                const cell = document.createElement("div");
+                cell.classList.add("cell");
+                cell.dataset.index = index;
+                cell.addEventListener("click", handleMove);
+                board.appendChild(cell);
+            });
+        }
+        
+        function resetGame() {
+            gameBoard = Array(9).fill("");
+            gameOver = false;
+            currentPlayer = "X";
+            document.getElementById("board").innerHTML = "";
+            createBoard();
+            document.querySelector(".end-transition")?.remove();
+        }
+    </script>
+</body>
+</html>
